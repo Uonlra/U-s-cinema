@@ -1,14 +1,33 @@
+import type { ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
-import { MovieContext } from "./MovieContextCore"
+import { DEFAULT_WATCH_STATUS, VALID_WATCH_STATUSES } from "../constants/watchStatus"
+import type { Library, WatchStatus } from "../types/library"
+import type { Movie } from "../types/movie"
+import { MovieContext, type MovieContextValue } from "./MovieContextCore"
 
-const DEFAULT_WATCH_STATUS = "not-started"
-const WATCH_STATUSES = new Set(["not-started", "watching", "watched"])
+type LibraryFlag = "favorite" | "watchlist"
 
-const getValidWatchStatus = (status) => {
-    return WATCH_STATUSES.has(status) ? status : DEFAULT_WATCH_STATUS
+interface LibraryFlags {
+    favorite?: boolean
+    watchlist?: boolean
+    watchStatus?: WatchStatus
 }
 
-const readJson = (key, fallback) => {
+interface MovieProviderProps {
+    children: ReactNode
+}
+
+const getMovieKey = (movieId: number | string): string => String(movieId)
+
+const isWatchStatus = (status: unknown): status is WatchStatus => {
+    return typeof status === "string" && VALID_WATCH_STATUSES.has(status as WatchStatus)
+}
+
+const getValidWatchStatus = (status: unknown): WatchStatus => {
+    return isWatchStatus(status) ? status : DEFAULT_WATCH_STATUS
+}
+
+const readJson = <TFallback,>(key: string, fallback: TFallback): unknown | TFallback => {
     try {
         const storedValue = localStorage.getItem(key)
         return storedValue ? JSON.parse(storedValue) : fallback
@@ -17,7 +36,7 @@ const readJson = (key, fallback) => {
     }
 }
 
-const hasStoredValue = (key) => {
+const hasStoredValue = (key: string): boolean => {
     try {
         return localStorage.getItem(key) !== null
     } catch {
@@ -25,7 +44,7 @@ const hasStoredValue = (key) => {
     }
 }
 
-const writeJson = (key, value) => {
+const writeJson = (key: string, value: unknown): void => {
     try {
         localStorage.setItem(key, JSON.stringify(value))
     } catch {
@@ -33,12 +52,21 @@ const writeJson = (key, value) => {
     }
 }
 
-const addMovieToLibrary = (library, movie, flags) => {
+const isMovie = (movie: unknown): movie is Movie => {
+    return Boolean(
+        movie &&
+        typeof movie === "object" &&
+        "id" in movie &&
+        typeof (movie as { id?: unknown }).id === "number"
+    )
+}
+
+const addMovieToLibrary = (library: Library, movie: Movie, flags: LibraryFlags): Library => {
     if (!movie?.id) {
         return library
     }
 
-    const currentEntry = library[movie.id] || {}
+    const currentEntry = library[getMovieKey(movie.id)]
 
     return {
         ...library,
@@ -51,18 +79,19 @@ const addMovieToLibrary = (library, movie, flags) => {
     }
 }
 
-const normalizeLibrary = (library) => {
+const normalizeLibrary = (library: unknown): Library => {
     if (!library || typeof library !== "object" || Array.isArray(library)) {
         return {}
     }
 
-    return Object.entries(library).reduce((normalizedLibrary, [movieId, entry]) => {
-        if (!entry?.movie?.id) {
+    return Object.entries(library).reduce<Library>((normalizedLibrary, [movieId, entry]) => {
+        if (!entry || typeof entry !== "object" || !("movie" in entry) || !isMovie(entry.movie)) {
             return normalizedLibrary
         }
 
-        const favorite = Boolean(entry.favorite)
-        const watchlist = Boolean(entry.watchlist)
+        const candidateEntry = entry as Partial<Library[string]>
+        const favorite = Boolean(candidateEntry.favorite)
+        const watchlist = Boolean(candidateEntry.watchlist)
 
         if (!favorite && !watchlist) {
             return normalizedLibrary
@@ -72,19 +101,19 @@ const normalizeLibrary = (library) => {
             movie: entry.movie,
             favorite,
             watchlist,
-            watchStatus: watchlist ? getValidWatchStatus(entry.watchStatus) : DEFAULT_WATCH_STATUS
+            watchStatus: watchlist ? getValidWatchStatus(candidateEntry.watchStatus) : DEFAULT_WATCH_STATUS
         }
 
         return normalizedLibrary
     }, {})
 }
 
-const getStoredMovies = (key) => {
+const getStoredMovies = (key: string): Movie[] => {
     const storedMovies = readJson(key, [])
-    return Array.isArray(storedMovies) ? storedMovies : []
+    return Array.isArray(storedMovies) ? storedMovies.filter(isMovie) : []
 }
 
-const getStoredLibrary = () => {
+const getStoredLibrary = (): Library => {
     const storedLibrary = normalizeLibrary(readJson("library", null))
 
     if (hasStoredValue("library")) {
@@ -93,27 +122,27 @@ const getStoredLibrary = () => {
 
     const favorites = getStoredMovies("favorites")
     const watchlist = getStoredMovies("watchlist")
-    const migratedFavorites = favorites.reduce((library, movie) => {
+    const migratedFavorites = favorites.reduce<Library>((library, movie) => {
         return addMovieToLibrary(library, movie, { favorite: true })
     }, {})
 
-    return watchlist.reduce((library, movie) => {
+    return watchlist.reduce<Library>((library, movie) => {
         return addMovieToLibrary(library, movie, { watchlist: true })
     }, migratedFavorites)
 }
 
-const getLibraryMovies = (library, key) => {
+const getLibraryMovies = (library: Library, key: LibraryFlag): Movie[] => {
     return Object.values(library)
         .filter((entry) => entry[key])
         .map((entry) => entry.movie)
 }
 
-const updateLibraryFlag = (movie, key, value) => (previousLibrary) => {
+const updateLibraryFlag = (movie: Movie, key: LibraryFlag, value: boolean) => (previousLibrary: Library): Library => {
     if (!movie?.id) {
         return previousLibrary
     }
 
-    const currentEntry = previousLibrary[movie.id] || {}
+    const currentEntry = previousLibrary[getMovieKey(movie.id)]
 
     return {
         ...previousLibrary,
@@ -127,8 +156,9 @@ const updateLibraryFlag = (movie, key, value) => (previousLibrary) => {
     }
 }
 
-const removeLibraryFlag = (movieId, key) => (previousLibrary) => {
-    const currentEntry = previousLibrary[movieId]
+const removeLibraryFlag = (movieId: number | string, key: LibraryFlag) => (previousLibrary: Library): Library => {
+    const movieKey = getMovieKey(movieId)
+    const currentEntry = previousLibrary[movieKey]
 
     if (!currentEntry) {
         return previousLibrary
@@ -140,19 +170,20 @@ const removeLibraryFlag = (movieId, key) => (previousLibrary) => {
     }
 
     if (!nextEntry.favorite && !nextEntry.watchlist) {
-        const { [movieId]: removedMovie, ...nextLibrary } = previousLibrary
+        const { [movieKey]: removedMovie, ...nextLibrary } = previousLibrary
         void removedMovie
         return nextLibrary
     }
 
     return {
         ...previousLibrary,
-        [movieId]: nextEntry
+        [movieKey]: nextEntry
     }
 }
 
-const updateLibraryWatchStatus = (movieId, status) => (previousLibrary) => {
-    const currentEntry = previousLibrary[movieId]
+const updateLibraryWatchStatus = (movieId: number | string, status: WatchStatus) => (previousLibrary: Library): Library => {
+    const movieKey = getMovieKey(movieId)
+    const currentEntry = previousLibrary[movieKey]
 
     if (!currentEntry?.watchlist) {
         return previousLibrary
@@ -160,14 +191,14 @@ const updateLibraryWatchStatus = (movieId, status) => (previousLibrary) => {
 
     return {
         ...previousLibrary,
-        [movieId]: {
+        [movieKey]: {
             ...currentEntry,
             watchStatus: getValidWatchStatus(status)
         }
     }
 }
 
-export const MovieProvider = ({children}) => {
+export const MovieProvider = ({children}: MovieProviderProps) => {
     const [library, setLibrary] = useState(getStoredLibrary)
 
     useEffect(() => {
@@ -177,19 +208,19 @@ export const MovieProvider = ({children}) => {
     const favorites = useMemo(() => getLibraryMovies(library, "favorite"), [library])
     const watchlist = useMemo(() => getLibraryMovies(library, "watchlist"), [library])
 
-    const addToFavorites = (movie) => {
+    const addToFavorites = (movie: Movie) => {
         setLibrary(updateLibraryFlag(movie, "favorite", true))
     }
 
-    const removeFromFavorites = (movieId) => {
+    const removeFromFavorites = (movieId: number | string) => {
         setLibrary(removeLibraryFlag(movieId, "favorite"))
     }
 
-    const isFavorite = (movieId) => {
-        return Boolean(library[movieId]?.favorite)
+    const isFavorite = (movieId: number | string) => {
+        return Boolean(library[getMovieKey(movieId)]?.favorite)
     }
 
-    const addToWatchlist = (movie) => {
+    const addToWatchlist = (movie: Movie) => {
         setLibrary((previousLibrary) => {
             const currentEntry = previousLibrary[movie?.id]
             const nextLibrary = updateLibraryFlag(movie, "watchlist", true)(previousLibrary)
@@ -208,23 +239,23 @@ export const MovieProvider = ({children}) => {
         })
     }
 
-    const removeFromWatchlist = (movieId) => {
+    const removeFromWatchlist = (movieId: number | string) => {
         setLibrary(removeLibraryFlag(movieId, "watchlist"))
     }
 
-    const isInWatchlist = (movieId) => {
-        return Boolean(library[movieId]?.watchlist)
+    const isInWatchlist = (movieId: number | string) => {
+        return Boolean(library[getMovieKey(movieId)]?.watchlist)
     }
 
-    const getWatchStatus = (movieId) => {
-        return getValidWatchStatus(library[movieId]?.watchStatus)
+    const getWatchStatus = (movieId: number | string) => {
+        return getValidWatchStatus(library[getMovieKey(movieId)]?.watchStatus)
     }
 
-    const updateWatchStatus = (movieId, status) => {
+    const updateWatchStatus = (movieId: number | string, status: WatchStatus) => {
         setLibrary(updateLibraryWatchStatus(movieId, status))
     }
 
-    const value = {
+    const value: MovieContextValue = {
         library,
         favorites,
         addToFavorites,

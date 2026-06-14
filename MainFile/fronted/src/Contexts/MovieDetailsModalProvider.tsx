@@ -1,10 +1,15 @@
+import type { ReactNode } from "react"
 import { useCallback, useMemo, useState } from "react"
-import { MovieDetailsModalContext } from "./MovieDetailsModalContext"
+import { MovieDetailsModalContext, type MovieDetailsModalContextValue } from "./MovieDetailsModalContext"
 
-export function MovieDetailsModalProvider({ children }) {
-    const [selectedMovieId, setSelectedMovieId] = useState(null)
+interface MovieDetailsModalProviderProps {
+    children: ReactNode
+}
 
-    const openMovieDetails = useCallback((movieId) => {
+export function MovieDetailsModalProvider({ children }: MovieDetailsModalProviderProps) {
+    const [selectedMovieId, setSelectedMovieId] = useState<number | string | null>(null)
+
+    const openMovieDetails = useCallback((movieId: number | string) => {
         if (!movieId) {
             return
         }
@@ -16,7 +21,7 @@ export function MovieDetailsModalProvider({ children }) {
         setSelectedMovieId(null)
     }, [])
 
-    const value = useMemo(() => ({
+    const value = useMemo<MovieDetailsModalContextValue>(() => ({
         selectedMovieId,
         openMovieDetails,
         closeMovieDetails
