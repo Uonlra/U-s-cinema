@@ -71,10 +71,10 @@ const addMovieToLibrary = (library: Library, movie: Movie, flags: LibraryFlags):
     return {
         ...library,
         [movie.id]: {
-            movie: currentEntry.movie || movie,
-            favorite: Boolean(currentEntry.favorite || flags.favorite),
-            watchlist: Boolean(currentEntry.watchlist || flags.watchlist),
-            watchStatus: getValidWatchStatus(currentEntry.watchStatus || flags.watchStatus)
+            movie: currentEntry?.movie || movie,
+            favorite: Boolean(currentEntry?.favorite || flags.favorite),
+            watchlist: Boolean(currentEntry?.watchlist || flags.watchlist),
+            watchStatus: getValidWatchStatus(currentEntry?.watchStatus || flags.watchStatus)
         }
     }
 }
@@ -147,10 +147,10 @@ const updateLibraryFlag = (movie: Movie, key: LibraryFlag, value: boolean) => (p
     return {
         ...previousLibrary,
         [movie.id]: {
-            movie: currentEntry.movie || movie,
-            favorite: Boolean(currentEntry.favorite),
-            watchlist: Boolean(currentEntry.watchlist),
-            watchStatus: getValidWatchStatus(currentEntry.watchStatus),
+            movie: currentEntry?.movie || movie,
+            favorite: Boolean(currentEntry?.favorite),
+            watchlist: Boolean(currentEntry?.watchlist),
+            watchStatus: getValidWatchStatus(currentEntry?.watchStatus),
             [key]: value
         }
     }
@@ -222,7 +222,8 @@ export const MovieProvider = ({children}: MovieProviderProps) => {
 
     const addToWatchlist = (movie: Movie) => {
         setLibrary((previousLibrary) => {
-            const currentEntry = previousLibrary[movie?.id]
+            const movieKey = getMovieKey(movie.id)
+            const currentEntry = previousLibrary[movieKey]
             const nextLibrary = updateLibraryFlag(movie, "watchlist", true)(previousLibrary)
 
             if (!movie?.id) {
@@ -231,8 +232,8 @@ export const MovieProvider = ({children}: MovieProviderProps) => {
 
             return {
                 ...nextLibrary,
-                [movie.id]: {
-                    ...nextLibrary[movie.id],
+                [movieKey]: {
+                    ...nextLibrary[movieKey],
                     watchStatus: getValidWatchStatus(currentEntry?.watchStatus)
                 }
             }

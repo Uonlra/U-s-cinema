@@ -1,4 +1,3 @@
-
 import { Route, Routes } from 'react-router-dom'
 import './css/App.css'
 import MovieDetailsModal from './components/MovieDetailsModal'
@@ -11,7 +10,6 @@ import { MovieProvider } from './Contexts/MovieContext'
 import { MovieDetailsModalProvider } from './Contexts/MovieDetailsModalProvider'
 
 function App() {
-
   return (
     <MovieProvider>
       <MovieDetailsModalProvider>
