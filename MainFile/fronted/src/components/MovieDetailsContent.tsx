@@ -2,14 +2,30 @@ import { useEffect, useState } from "react"
 import { WATCH_STATUS_OPTIONS } from "../constants/watchStatus"
 import { useMovieContext } from "../Contexts/MovieContextCore"
 import { getMovieDetails } from "../services/api"
+import type { WatchStatus } from "../types/library"
+import type { Movie, MovieDetails } from "../types/movie"
 import "../css/MovieDetails.css"
 
 const BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
 const POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500"
 
-const getReleaseYear = (movie) => movie?.release_date?.split("-")[0] || "Unknown"
+interface DetailsActionProps {
+    onBack: () => void
+    backLabel?: string
+}
 
-const getRuntime = (runtime) => {
+interface DetailsStatusProps extends DetailsActionProps {
+    title: string
+    message: string
+}
+
+interface MovieDetailsContentProps extends DetailsActionProps {
+    movieId?: number | string
+}
+
+const getReleaseYear = (movie: MovieDetails | null): string => movie?.release_date?.split("-")[0] || "Unknown"
+
+const getRuntime = (runtime?: number | null): string => {
     if (!runtime) return "Runtime unknown"
 
     const hours = Math.floor(runtime / 60)
@@ -20,17 +36,17 @@ const getRuntime = (runtime) => {
     return `${hours}h ${minutes}m`
 }
 
-const getRating = (movie) => {
+const getRating = (movie: MovieDetails | null): string => {
     const rating = Number(movie?.vote_average || 0)
     return rating ? rating.toFixed(1) : "Not rated"
 }
 
-const createLibraryMovie = (movie) => ({
+const createLibraryMovie = (movie: MovieDetails): Movie => ({
     ...movie,
     genre_ids: movie.genre_ids || movie.genres?.map((genre) => genre.id) || []
 })
 
-export function MovieDetailsSkeleton({ onBack, backLabel = "Back" }) {
+export function MovieDetailsSkeleton({ onBack, backLabel = "Back" }: DetailsActionProps) {
     return (
         <section className="movie-details movie-details-loading" aria-label="Loading movie details">
             <div className="movie-details-shell">
@@ -64,7 +80,7 @@ export function MovieDetailsSkeleton({ onBack, backLabel = "Back" }) {
     )
 }
 
-export function DetailsStatus({ title, message, onBack, backLabel = "Back to Movies" }) {
+export function DetailsStatus({ title, message, onBack, backLabel = "Back to Movies" }: DetailsStatusProps) {
     return (
         <section className="movie-details-status" role="status">
             <p className="details-status-kicker">Movie Details</p>
@@ -78,10 +94,10 @@ export function DetailsStatus({ title, message, onBack, backLabel = "Back to Mov
     )
 }
 
-function MovieDetailsContent({ movieId, onBack, backLabel = "Back" }) {
-    const [movie, setMovie] = useState(null)
+function MovieDetailsContent({ movieId, onBack, backLabel = "Back" }: MovieDetailsContentProps) {
+    const [movie, setMovie] = useState<MovieDetails | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+    const [error, setError] = useState<string | null>(null)
     const {
         addToFavorites,
         removeFromFavorites,
@@ -102,13 +118,17 @@ function MovieDetailsContent({ movieId, onBack, backLabel = "Back" }) {
             setMovie(null)
 
             try {
+                if (!movieId) {
+                    throw new Error("Missing movie id.")
+                }
+
                 const movieDetails = await getMovieDetails(movieId)
                 if (!ignoreResult) {
                     setMovie(movieDetails)
                 }
             } catch (error) {
                 if (!ignoreResult) {
-                    setError(error.message)
+                    setError(error instanceof Error ? error.message : "Unable to load movie details.")
                 }
             } finally {
                 if (!ignoreResult) {
@@ -250,7 +270,7 @@ function MovieDetailsContent({ movieId, onBack, backLabel = "Back" }) {
                                 <select
                                     value={watchStatus}
                                     aria-label={`Watch status for ${movie.title}`}
-                                    onChange={(event) => updateWatchStatus(movie.id, event.target.value)}
+                                    onChange={(event) => updateWatchStatus(movie.id, event.target.value as WatchStatus)}
                                 >
                                     {WATCH_STATUS_OPTIONS.map((option) => (
                                         <option key={option.value} value={option.value}>

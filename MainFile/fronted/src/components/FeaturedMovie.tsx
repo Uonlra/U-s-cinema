@@ -1,8 +1,32 @@
+import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent } from "react"
 import { useEffect, useRef } from "react"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
+import type { Movie } from "../types/movie"
 import { getMovieImage, getRating, getReleaseYear } from "../utils/movieFormatters"
 import FavoriteToggleButton from "./FavoriteToggleButton"
 import WatchlistToggleButton from "./WatchlistToggleButton"
+
+interface FeaturedMovieProps {
+    movie: Movie
+    movies?: Movie[]
+    activeIndex?: number
+    eyebrow: string
+    favorite: boolean
+    inWatchlist: boolean
+    onSelectMovie?: (index: number) => void
+    onShowNext?: () => void
+    onShowPrevious?: () => void
+    onHoverStart?: () => void
+    onHoverEnd?: () => void
+    onFocusStart?: () => void
+    onFocusEnd?: () => void
+    onToggleFavorite: (movie: Movie) => void
+    onToggleWatchlist: (movie: Movie) => void
+}
+
+const isContainedTarget = (container: HTMLElement, target: EventTarget | null): boolean => {
+    return target instanceof Node && container.contains(target)
+}
 
 function FeaturedMovie({
     movie,
@@ -20,16 +44,16 @@ function FeaturedMovie({
     onFocusEnd,
     onToggleFavorite,
     onToggleWatchlist
-}) {
+}: FeaturedMovieProps) {
     const { openMovieDetails } = useMovieDetailsModal()
     const featuredImage = getMovieImage(movie)
     const canSwitchMovies = movies.length > 1
-    const featuredPanelRef = useRef(null)
+    const featuredPanelRef = useRef<HTMLElement | null>(null)
     const rating = getRating(movie)
 
     useEffect(() => {
-        const handlePointerMove = (event) => {
-            if (featuredPanelRef.current?.contains(event.target)) {
+        const handlePointerMove = (event: globalThis.PointerEvent) => {
+            if (featuredPanelRef.current && isContainedTarget(featuredPanelRef.current, event.target)) {
                 onHoverStart?.()
                 return
             }
@@ -42,7 +66,7 @@ function FeaturedMovie({
         return () => window.removeEventListener("pointermove", handlePointerMove)
     }, [onHoverEnd, onHoverStart])
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
         if (!canSwitchMovies) {
             return
         }
@@ -59,14 +83,14 @@ function FeaturedMovie({
         }
     }
 
-    const handleBlur = (event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
+    const handleBlur = (event: FocusEvent<HTMLElement>) => {
+        if (!isContainedTarget(event.currentTarget, event.relatedTarget)) {
             onFocusEnd?.()
         }
     }
 
-    const handleHoverEnd = (event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
+    const handleHoverEnd = (event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) => {
+        if (!isContainedTarget(event.currentTarget, event.relatedTarget)) {
             onHoverEnd?.()
         }
     }

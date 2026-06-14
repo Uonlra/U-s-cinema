@@ -1,13 +1,20 @@
+import type { FormEvent, KeyboardEvent } from 'react'
 import { useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate, useSearchParams, type NavigateFunction } from 'react-router-dom'
 import '../css/Navbar.css'
 
-const getNavLinkClass = ({ isActive }) => `nav-link ${isActive ? "active" : ""}`
+const getNavLinkClass = ({ isActive }: { isActive: boolean }) => `nav-link ${isActive ? "active" : ""}`
 
-function NavSearch({ currentSearchQuery, currentPathname, navigate }) {
+interface NavSearchProps {
+    currentSearchQuery: string
+    currentPathname: string
+    navigate: NavigateFunction
+}
+
+function NavSearch({ currentSearchQuery, currentPathname, navigate }: NavSearchProps) {
     const [searchValue, setSearchValue] = useState(currentPathname === '/' ? currentSearchQuery : '')
 
-    const handleSearchSubmit = (event) => {
+    const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
 
         const query = searchValue.trim()
@@ -19,9 +26,9 @@ function NavSearch({ currentSearchQuery, currentPathname, navigate }) {
         navigate(`/?q=${encodeURIComponent(query)}`)
     }
 
-    const handleSearchKeyDown = (event) => {
+    const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
-            handleSearchSubmit(event)
+            event.currentTarget.form?.requestSubmit()
         }
     }
 

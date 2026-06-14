@@ -1,3 +1,4 @@
+import type { FormEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import EmptyState from "../components/EmptyState"
 import MovieCatalogCard from "../components/MovieCatalogCard"
@@ -6,9 +7,19 @@ import SearchField from "../components/SearchField"
 import SortDropdown from "../components/SortDropdown"
 import { MOVIE_GENRE_FILTERS, MOVIE_GENRE_NAMES } from "../constants/movieMeta"
 import { discoverMovies, searchMoviePage } from "../services/api"
+import type { Movie } from "../types/movie"
 import "../css/Movies.css"
 
-const SORT_OPTIONS = [
+type MovieSortValue = "popular" | "top-rated" | "newest"
+type PaginationItem = number | "ellipsis" | "ellipsis-end"
+
+interface MovieSortOption {
+    label: string
+    value: MovieSortValue
+    discoverSort: string
+}
+
+const SORT_OPTIONS: MovieSortOption[] = [
     {
         label: "Popular",
         value: "popular",
@@ -28,25 +39,29 @@ const SORT_OPTIONS = [
 
 const MAX_VISIBLE_PAGES = 10
 
-const getSortOption = (sortValue) => {
+const getSortOption = (sortValue: MovieSortValue): MovieSortOption => {
     return SORT_OPTIONS.find((option) => option.value === sortValue) || SORT_OPTIONS[0]
 }
 
-const sortSearchMovies = (movies, sortValue) => {
+const isMovieSortValue = (sortValue: string): sortValue is MovieSortValue => {
+    return SORT_OPTIONS.some((option) => option.value === sortValue)
+}
+
+const sortSearchMovies = (movies: Movie[], sortValue: MovieSortValue): Movie[] => {
     return [...movies].sort((firstMovie, secondMovie) => {
         if (sortValue === "top-rated") {
             return Number(secondMovie.vote_average || 0) - Number(firstMovie.vote_average || 0)
         }
 
         if (sortValue === "newest") {
-            return new Date(secondMovie.release_date || 0) - new Date(firstMovie.release_date || 0)
+            return new Date(secondMovie.release_date || 0).getTime() - new Date(firstMovie.release_date || 0).getTime()
         }
 
         return Number(secondMovie.popularity || 0) - Number(firstMovie.popularity || 0)
     })
 }
 
-const getPaginationItems = (currentPage, totalPages) => {
+const getPaginationItems = (currentPage: number, totalPages: number): PaginationItem[] => {
     const boundedTotal = Math.min(totalPages, MAX_VISIBLE_PAGES)
 
     if (boundedTotal <= 4) {
@@ -65,15 +80,15 @@ const getPaginationItems = (currentPage, totalPages) => {
 }
 
 function Movies() {
-    const [movies, setMovies] = useState([])
+    const [movies, setMovies] = useState<Movie[]>([])
     const [searchValue, setSearchValue] = useState("")
     const [submittedSearch, setSubmittedSearch] = useState("")
     const [activeGenre, setActiveGenre] = useState("")
-    const [sortValue, setSortValue] = useState("popular")
+    const [sortValue, setSortValue] = useState<MovieSortValue>("popular")
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+    const [error, setError] = useState<string | null>(null)
     const sortOption = getSortOption(sortValue)
     const visibleTotalPages = Math.max(1, Math.min(totalPages, MAX_VISIBLE_PAGES))
     const paginationItems = useMemo(
@@ -118,7 +133,7 @@ function Movies() {
                 if (!ignoreResult) {
                     setMovies([])
                     setTotalPages(1)
-                    setError(error.message)
+                    setError(error instanceof Error ? error.message : "Unable to load movies.")
                 }
             } finally {
                 if (!ignoreResult) {
@@ -134,23 +149,27 @@ function Movies() {
         }
     }, [activeGenre, currentPage, sortOption.discoverSort, sortValue, submittedSearch])
 
-    const handleSearchSubmit = (event) => {
+    const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         setSubmittedSearch(searchValue.trim())
         setCurrentPage(1)
     }
 
-    const handleGenreChange = (genreValue) => {
+    const handleGenreChange = (genreValue: string) => {
         setActiveGenre(genreValue)
         setCurrentPage(1)
     }
 
-    const handleSortChange = (nextSortValue) => {
+    const handleSortChange = (nextSortValue: string) => {
+        if (!isMovieSortValue(nextSortValue)) {
+            return
+        }
+
         setSortValue(nextSortValue)
         setCurrentPage(1)
     }
 
-    const handlePageChange = (pageNumber) => {
+    const handlePageChange = (pageNumber: number) => {
         setCurrentPage(Math.min(Math.max(pageNumber, 1), visibleTotalPages))
     }
 

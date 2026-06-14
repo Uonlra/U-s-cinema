@@ -13,15 +13,27 @@ import {
     searchMovies
 } from "../services/api"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { Movie } from "../types/movie"
 import '../css/Home.css'
 
-const INITIAL_SECTIONS = {
+interface HomeSections {
+    trending: Movie[]
+    newReleases: Movie[]
+    topRated: Movie[]
+}
+
+interface HomeMovieGroups {
+    featuredMovies: Movie[]
+    sections: HomeSections
+}
+
+const INITIAL_SECTIONS: HomeSections = {
     trending: [],
     newReleases: [],
     topRated: []
 }
 
-const getHomeMovieGroups = async () => {
+const getHomeMovieGroups = async (): Promise<HomeMovieGroups> => {
     const [trendingMovies, newReleaseMovies, topRatedMovies] = await Promise.all([
         getTrendingMovies(),
         getNowPlayingMovies(),
@@ -46,10 +58,10 @@ const getHomeMovieGroups = async () => {
 }
 
 function Home() {
-    const [featuredMovies, setFeaturedMovies] = useState([])
+    const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([])
     const [sections, setSections] = useState(INITIAL_SECTIONS)
     const [isSearchMode, setIsSearchMode] = useState(false)
-    const [error, setError] = useState(null)
+    const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [searchParams, setSearchParams] = useSearchParams()
     const submittedQuery = searchParams.get('q')?.trim() || ''
@@ -110,7 +122,7 @@ function Home() {
                 setIsSearchMode(false)
             } catch (error) {
                 if (!ignoreResult) {
-                    setError(error.message)
+                    setError(error instanceof Error ? error.message : "Unable to load movies.")
                 }
             } finally {
                 if (!ignoreResult) {
@@ -130,7 +142,7 @@ function Home() {
         setSearchParams({})
     }
 
-    const handleToggleFavorite = (movie) => {
+    const handleToggleFavorite = (movie: Movie) => {
         if (isFavorite(movie.id)) {
             removeFromFavorites(movie.id)
             return
@@ -139,7 +151,7 @@ function Home() {
         addToFavorites(movie)
     }
 
-    const handleToggleWatchlist = (movie) => {
+    const handleToggleWatchlist = (movie: Movie) => {
         if (isInWatchlist(movie.id)) {
             removeFromWatchlist(movie.id)
             return

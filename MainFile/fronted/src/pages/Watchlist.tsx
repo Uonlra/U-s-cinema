@@ -3,7 +3,7 @@ import EmptyState from "../components/EmptyState"
 import PageHeader from "../components/PageHeader"
 import SearchField from "../components/SearchField"
 import SortDropdown from "../components/SortDropdown"
-import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES } from "../constants/movieMeta"
+import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES, type LibrarySortValue } from "../constants/movieMeta"
 import {
     NEXT_WATCH_STATUS,
     WATCH_STATUS_ACTION_LABELS,
@@ -13,15 +13,34 @@ import {
 } from "../constants/watchStatus"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { WatchStatus } from "../types/library"
+import type { Movie } from "../types/movie"
 import { getMovieImage, getRating, getReleaseYear } from "../utils/movieFormatters"
 import "../css/Movies.css"
 import "../css/Watchlist.css"
 
-const getReleaseYearNumber = (movie) => {
+type WatchStatusFilter = WatchStatus | "all"
+
+interface WatchStatusCounts {
+    "not-started": number
+    watching: number
+    watched: number
+}
+
+interface WatchlistRowProps {
+    movie: Movie
+    index: number
+    status: WatchStatus
+    onAdvanceStatus: (movieId: number | string, currentStatus: WatchStatus) => void
+    onStatusChange: (movieId: number | string, status: WatchStatus) => void
+    onRemove: (movieId: number | string) => void
+}
+
+const getReleaseYearNumber = (movie: Movie): number => {
     return Number(movie?.release_date?.split("-")[0] || 0)
 }
 
-const getMovieGenres = (movie) => {
+const getMovieGenres = (movie: Movie): string => {
     return movie.genre_ids
         ?.map((genreId) => MOVIE_GENRE_NAMES[genreId])
         .filter(Boolean)
@@ -29,7 +48,7 @@ const getMovieGenres = (movie) => {
         .join(", ") || "Cinema"
 }
 
-const sortWatchlistMovies = (movies, sortValue) => {
+const sortWatchlistMovies = (movies: Movie[], sortValue: LibrarySortValue): Movie[] => {
     return [...movies].sort((firstMovie, secondMovie) => {
         if (sortValue === "year") {
             return getReleaseYearNumber(secondMovie) - getReleaseYearNumber(firstMovie)
@@ -43,6 +62,10 @@ const sortWatchlistMovies = (movies, sortValue) => {
     })
 }
 
+const isLibrarySortValue = (sortValue: string): sortValue is LibrarySortValue => {
+    return LIBRARY_SORT_OPTIONS.some((option) => option.value === sortValue)
+}
+
 function WatchlistRow({
     movie,
     index,
@@ -50,7 +73,7 @@ function WatchlistRow({
     onAdvanceStatus,
     onStatusChange,
     onRemove
-}) {
+}: WatchlistRowProps) {
     const { openMovieDetails } = useMovieDetailsModal()
     const imageUrl = getMovieImage(movie)
 
@@ -86,7 +109,7 @@ function WatchlistRow({
                     className={`watch-status-select ${status}`}
                     value={status}
                     aria-label={`Watch status for ${movie.title}`}
-                    onChange={(event) => onStatusChange(movie.id, event.target.value)}
+                    onChange={(event) => onStatusChange(movie.id, event.target.value as WatchStatus)}
                 >
                     {WATCH_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -124,8 +147,8 @@ function Watchlist() {
         removeFromWatchlist
     } = useMovieContext()
     const [searchValue, setSearchValue] = useState("")
-    const [activeStatus, setActiveStatus] = useState("all")
-    const [sortValue, setSortValue] = useState("rating")
+    const [activeStatus, setActiveStatus] = useState<WatchStatusFilter>("all")
+    const [sortValue, setSortValue] = useState<LibrarySortValue>("rating")
     const statusCounts = useMemo(() => {
         return watchlist.reduce((counts, movie) => {
             const status = getWatchStatus(movie.id)
@@ -137,7 +160,7 @@ function Watchlist() {
             "not-started": 0,
             watching: 0,
             watched: 0
-        })
+        } satisfies WatchStatusCounts)
     }, [getWatchStatus, watchlist])
     const visibleMovies = useMemo(() => {
         const normalizedSearch = searchValue.trim().toLowerCase()
@@ -153,8 +176,14 @@ function Watchlist() {
         return sortWatchlistMovies(filteredMovies, sortValue)
     }, [activeStatus, getWatchStatus, searchValue, sortValue, watchlist])
 
-    const handleAdvanceStatus = (movieId, currentStatus) => {
+    const handleAdvanceStatus = (movieId: number | string, currentStatus: WatchStatus) => {
         updateWatchStatus(movieId, NEXT_WATCH_STATUS[currentStatus])
+    }
+
+    const handleSortChange = (nextSortValue: string) => {
+        if (isLibrarySortValue(nextSortValue)) {
+            setSortValue(nextSortValue)
+        }
     }
 
     return (
@@ -218,7 +247,7 @@ function Watchlist() {
                     <SortDropdown
                         options={LIBRARY_SORT_OPTIONS}
                         value={sortValue}
-                        onChange={setSortValue}
+                        onChange={handleSortChange}
                     />
                 </div>
             </div>

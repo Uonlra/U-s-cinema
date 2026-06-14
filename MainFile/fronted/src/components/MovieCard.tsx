@@ -1,7 +1,13 @@
 import "../css/MovieCard.css"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { MouseEvent } from "react"
+import type { Movie } from "../types/movie"
 
-function MovieCard({movie}) {
+interface MovieCardProps {
+    movie: Movie
+}
+
+function MovieCard({movie}: MovieCardProps) {
     const {isFavorite, addToFavorites, removeFromFavorites} = useMovieContext()
     const favorite = isFavorite(movie.id)
     const posterUrl = movie.poster_path
@@ -9,7 +15,7 @@ function MovieCard({movie}) {
         : null
     const releaseYear = movie.release_date?.split("-")[0] || "Unknown"
 
-    function onFavoriteClick(e) {
+    function onFavoriteClick(e: MouseEvent<HTMLButtonElement>) {
         e.preventDefault()
         if (favorite) removeFromFavorites(movie.id)
         else addToFavorites(movie)

@@ -1,3 +1,15 @@
+import type { FormEvent } from "react"
+
+interface SearchFieldProps {
+    value: string
+    onChange: (value: string) => void
+    onSubmit?: (event: FormEvent<HTMLFormElement>) => void
+    placeholder: string
+    ariaLabel: string
+    className?: string
+    icon?: string
+}
+
 function SearchField({
     value,
     onChange,
@@ -6,8 +18,8 @@ function SearchField({
     ariaLabel,
     className = "",
     icon = "⌕"
-}) {
-    const handleSubmit = (event) => {
+}: SearchFieldProps) {
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         onSubmit?.(event)
     }

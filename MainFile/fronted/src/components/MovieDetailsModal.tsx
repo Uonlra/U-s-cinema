@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react"
 import { useEffect } from "react"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
 import MovieDetailsContent from "./MovieDetailsContent"
@@ -11,7 +12,7 @@ function MovieDetailsModal() {
             return undefined
         }
 
-        const handleKeyDown = (event) => {
+        const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
                 closeMovieDetails()
             }
@@ -39,7 +40,7 @@ function MovieDetailsModal() {
         <div
             className="movie-details-modal"
             role="presentation"
-            onMouseDown={(event) => {
+            onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
                 if (event.target === event.currentTarget) {
                     closeMovieDetails()
                 }
@@ -50,7 +51,7 @@ function MovieDetailsModal() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Movie details"
-                onMouseDown={(event) => event.stopPropagation()}
+                onMouseDown={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
             >
                 <button
                     className="movie-details-close"

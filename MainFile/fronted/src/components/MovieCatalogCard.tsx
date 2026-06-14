@@ -1,8 +1,15 @@
+import type { MouseEvent } from "react"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { Movie } from "../types/movie"
 import { getMovieImage, getRating, getReleaseYear } from "../utils/movieFormatters"
 
-function MovieCatalogCard({ movie, genreNames }) {
+interface MovieCatalogCardProps {
+    movie: Movie
+    genreNames: Record<number, string>
+}
+
+function MovieCatalogCard({ movie, genreNames }: MovieCatalogCardProps) {
     const { openMovieDetails } = useMovieDetailsModal()
     const {
         addToFavorites,
@@ -17,7 +24,7 @@ function MovieCatalogCard({ movie, genreNames }) {
         .slice(0, 2)
         .join(", ") || "Cinema"
 
-    const handleFavoriteClick = (event) => {
+    const handleFavoriteClick = (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault()
         event.stopPropagation()
 

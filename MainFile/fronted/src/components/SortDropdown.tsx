@@ -1,8 +1,24 @@
+import type { KeyboardEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 
-function SortDropdown({ options, value, onChange }) {
+export interface SortOption<TValue extends string = string> {
+    label: string
+    value: TValue
+}
+
+interface SortDropdownProps<TValue extends string = string> {
+    options: SortOption<TValue>[]
+    value: TValue
+    onChange: (value: TValue) => void
+}
+
+const isContainedTarget = (container: HTMLElement, target: EventTarget | null): boolean => {
+    return target instanceof Node && container.contains(target)
+}
+
+function SortDropdown<TValue extends string = string>({ options, value, onChange }: SortDropdownProps<TValue>) {
     const [open, setOpen] = useState(false)
-    const dropdownRef = useRef(null)
+    const dropdownRef = useRef<HTMLDivElement | null>(null)
     const selectedOption = options.find((option) => option.value === value) || options[0]
 
     useEffect(() => {
@@ -10,8 +26,8 @@ function SortDropdown({ options, value, onChange }) {
             return undefined
         }
 
-        const handlePointerDown = (event) => {
-            if (!dropdownRef.current?.contains(event.target)) {
+        const handlePointerDown = (event: PointerEvent) => {
+            if (dropdownRef.current && !isContainedTarget(dropdownRef.current, event.target)) {
                 setOpen(false)
             }
         }
@@ -21,12 +37,12 @@ function SortDropdown({ options, value, onChange }) {
         return () => document.removeEventListener("pointerdown", handlePointerDown)
     }, [open])
 
-    const handleOptionSelect = (nextValue) => {
+    const handleOptionSelect = (nextValue: TValue) => {
         onChange(nextValue)
         setOpen(false)
     }
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === "Escape") {
             setOpen(false)
             return

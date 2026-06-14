@@ -4,16 +4,17 @@ import MovieCatalogCard from "../components/MovieCatalogCard"
 import PageHeader from "../components/PageHeader"
 import SearchField from "../components/SearchField"
 import SortDropdown from "../components/SortDropdown"
-import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES } from "../constants/movieMeta"
+import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES, type LibrarySortValue } from "../constants/movieMeta"
 import "../css/Movies.css"
 import "../css/Favorites.css"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { Movie } from "../types/movie"
 
-const getReleaseYearNumber = (movie) => {
+const getReleaseYearNumber = (movie: Movie): number => {
     return Number(movie?.release_date?.split("-")[0] || 0)
 }
 
-const sortFavoriteMovies = (movies, sortValue) => {
+const sortFavoriteMovies = (movies: Movie[], sortValue: LibrarySortValue): Movie[] => {
     return [...movies].sort((firstMovie, secondMovie) => {
         if (sortValue === "year") {
             return getReleaseYearNumber(secondMovie) - getReleaseYearNumber(firstMovie)
@@ -27,7 +28,7 @@ const sortFavoriteMovies = (movies, sortValue) => {
     })
 }
 
-const getAverageRating = (movies) => {
+const getAverageRating = (movies: Movie[]): string => {
     const ratedMovies = movies.filter((movie) => Number(movie.vote_average) > 0)
 
     if (ratedMovies.length === 0) {
@@ -38,10 +39,14 @@ const getAverageRating = (movies) => {
     return (ratingTotal / ratedMovies.length).toFixed(1)
 }
 
+const isLibrarySortValue = (sortValue: string): sortValue is LibrarySortValue => {
+    return LIBRARY_SORT_OPTIONS.some((option) => option.value === sortValue)
+}
+
 function Favorites() {
     const { favorites } = useMovieContext()
     const [searchValue, setSearchValue] = useState("")
-    const [sortValue, setSortValue] = useState("rating")
+    const [sortValue, setSortValue] = useState<LibrarySortValue>("rating")
     const favoriteMovies = useMemo(() => {
         const normalizedSearch = searchValue.trim().toLowerCase()
         const filteredMovies = normalizedSearch
@@ -51,6 +56,12 @@ function Favorites() {
         return sortFavoriteMovies(filteredMovies, sortValue)
     }, [favorites, searchValue, sortValue])
     const averageRating = useMemo(() => getAverageRating(favorites), [favorites])
+
+    const handleSortChange = (nextSortValue: string) => {
+        if (isLibrarySortValue(nextSortValue)) {
+            setSortValue(nextSortValue)
+        }
+    }
 
     return (
         <section className="favorites-page">
@@ -92,7 +103,7 @@ function Favorites() {
                     <SortDropdown
                         options={LIBRARY_SORT_OPTIONS}
                         value={sortValue}
-                        onChange={setSortValue}
+                        onChange={handleSortChange}
                     />
                 </div>
             )}
