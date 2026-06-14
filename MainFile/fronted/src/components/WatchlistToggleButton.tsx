@@ -1,4 +1,14 @@
-function WatchlistToggleButton({ movie, inWatchlist, onToggle, className = "" }) {
+import type { MouseEvent } from "react"
+import type { Movie } from "../types/movie"
+
+interface WatchlistToggleButtonProps {
+    movie: Movie
+    inWatchlist: boolean
+    onToggle: (movie: Movie) => void
+    className?: string
+}
+
+function WatchlistToggleButton({ movie, inWatchlist, onToggle, className = "" }: WatchlistToggleButtonProps) {
     return (
         <button
             type="button"
@@ -6,7 +16,7 @@ function WatchlistToggleButton({ movie, inWatchlist, onToggle, className = "" })
             aria-label={`${inWatchlist ? "Remove" : "Add"} ${movie.title} ${inWatchlist ? "from" : "to"} watchlist`}
             aria-pressed={inWatchlist}
             title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
-            onClick={(event) => {
+            onClick={(event: MouseEvent<HTMLButtonElement>) => {
                 event.preventDefault()
                 event.stopPropagation()
                 onToggle(movie)

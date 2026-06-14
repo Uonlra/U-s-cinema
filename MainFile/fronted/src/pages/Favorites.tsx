@@ -1,43 +1,20 @@
 import { useMemo, useState } from "react"
+import EmptyState from "../components/EmptyState"
 import MovieCatalogCard from "../components/MovieCatalogCard"
+import PageHeader from "../components/PageHeader"
+import SearchField from "../components/SearchField"
 import SortDropdown from "../components/SortDropdown"
+import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES, type LibrarySortValue } from "../constants/movieMeta"
 import "../css/Movies.css"
 import "../css/Favorites.css"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { Movie } from "../types/movie"
 
-const FAVORITE_SORT_OPTIONS = [
-    { label: "Rating", value: "rating" },
-    { label: "Release Year", value: "year" },
-    { label: "Title", value: "title" }
-]
-
-const GENRE_NAMES = {
-    12: "Adventure",
-    14: "Fantasy",
-    16: "Animation",
-    18: "Drama",
-    27: "Horror",
-    28: "Action",
-    35: "Comedy",
-    36: "History",
-    37: "Western",
-    53: "Thriller",
-    80: "Crime",
-    99: "Documentary",
-    878: "Sci-Fi",
-    9648: "Mystery",
-    10402: "Music",
-    10749: "Romance",
-    10751: "Family",
-    10752: "War",
-    10770: "TV Movie"
-}
-
-const getReleaseYearNumber = (movie) => {
+const getReleaseYearNumber = (movie: Movie): number => {
     return Number(movie?.release_date?.split("-")[0] || 0)
 }
 
-const sortFavoriteMovies = (movies, sortValue) => {
+const sortFavoriteMovies = (movies: Movie[], sortValue: LibrarySortValue): Movie[] => {
     return [...movies].sort((firstMovie, secondMovie) => {
         if (sortValue === "year") {
             return getReleaseYearNumber(secondMovie) - getReleaseYearNumber(firstMovie)
@@ -51,7 +28,7 @@ const sortFavoriteMovies = (movies, sortValue) => {
     })
 }
 
-const getAverageRating = (movies) => {
+const getAverageRating = (movies: Movie[]): string => {
     const ratedMovies = movies.filter((movie) => Number(movie.vote_average) > 0)
 
     if (ratedMovies.length === 0) {
@@ -62,10 +39,14 @@ const getAverageRating = (movies) => {
     return (ratingTotal / ratedMovies.length).toFixed(1)
 }
 
+const isLibrarySortValue = (sortValue: string): sortValue is LibrarySortValue => {
+    return LIBRARY_SORT_OPTIONS.some((option) => option.value === sortValue)
+}
+
 function Favorites() {
     const { favorites } = useMovieContext()
     const [searchValue, setSearchValue] = useState("")
-    const [sortValue, setSortValue] = useState("rating")
+    const [sortValue, setSortValue] = useState<LibrarySortValue>("rating")
     const favoriteMovies = useMemo(() => {
         const normalizedSearch = searchValue.trim().toLowerCase()
         const filteredMovies = normalizedSearch
@@ -76,13 +57,20 @@ function Favorites() {
     }, [favorites, searchValue, sortValue])
     const averageRating = useMemo(() => getAverageRating(favorites), [favorites])
 
+    const handleSortChange = (nextSortValue: string) => {
+        if (isLibrarySortValue(nextSortValue)) {
+            setSortValue(nextSortValue)
+        }
+    }
+
     return (
         <section className="favorites-page">
             <div className="favorites-hero">
-                <header className="favorites-header">
-                    <h1>Favorites</h1>
-                    <p>Movies you love most</p>
-                </header>
+                <PageHeader
+                    className="favorites-header"
+                    title="Favorites"
+                    description="Movies you love most"
+                />
 
                 <div className="favorites-stats" aria-label="Favorites summary">
                     <div className="favorite-stat">
@@ -104,45 +92,44 @@ function Favorites() {
 
             {favorites.length > 0 && (
                 <div className="favorites-toolbar">
-                    <form className="favorites-search" role="search" onSubmit={(event) => event.preventDefault()}>
-                        <span aria-hidden="true">⌕</span>
-                        <input
-                            type="search"
-                            placeholder="Search favorites..."
-                            aria-label="Search favorite movies"
-                            value={searchValue}
-                            onChange={(event) => setSearchValue(event.target.value)}
-                        />
-                    </form>
+                    <SearchField
+                        className="favorites-search"
+                        placeholder="Search favorites..."
+                        ariaLabel="Search favorite movies"
+                        value={searchValue}
+                        onChange={setSearchValue}
+                    />
 
                     <SortDropdown
-                        options={FAVORITE_SORT_OPTIONS}
+                        options={LIBRARY_SORT_OPTIONS}
                         value={sortValue}
-                        onChange={setSortValue}
+                        onChange={handleSortChange}
                     />
                 </div>
             )}
 
             {favorites.length === 0 ? (
-                <div className="favorites-empty">
-                    <h2>No Favorite Movies Yet</h2>
-                    <p>Use the heart button on Home or Movies to build your personal collection.</p>
-                </div>
+                <EmptyState
+                    className="favorites-empty"
+                    title="No Favorite Movies Yet"
+                    description="Use the heart button on Home or Movies to build your personal collection."
+                />
             ) : favoriteMovies.length > 0 ? (
                 <div className="catalog-grid favorites-grid">
                     {favoriteMovies.map((movie) => (
                         <MovieCatalogCard
                             key={movie.id}
                             movie={movie}
-                            genreNames={GENRE_NAMES}
+                            genreNames={MOVIE_GENRE_NAMES}
                         />
                     ))}
                 </div>
             ) : (
-                <div className="favorites-empty">
-                    <h2>No matching favorites.</h2>
-                    <p>Try another title or clear the search field.</p>
-                </div>
+                <EmptyState
+                    className="favorites-empty"
+                    title="No matching favorites."
+                    description="Try another title or clear the search field."
+                />
             )}
         </section>
     )

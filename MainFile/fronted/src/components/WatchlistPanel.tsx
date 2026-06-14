@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
+import type { Movie } from "../types/movie"
 import { getMoviePoster, getRating, getReleaseYear } from "../utils/movieFormatters"
 
-function WatchlistPanel({ movies, onRemove }) {
+interface WatchlistPanelProps {
+    movies: Movie[]
+    onRemove: (movieId: number | string) => void
+}
+
+function WatchlistPanel({ movies, onRemove }: WatchlistPanelProps) {
     const { openMovieDetails } = useMovieDetailsModal()
 
     return (

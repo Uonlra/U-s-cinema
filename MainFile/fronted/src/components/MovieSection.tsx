@@ -1,6 +1,23 @@
 import MovieStripCard from "./MovieStripCard"
+import type { Movie } from "../types/movie"
 
-function MovieSection({ title, movies, isFavorite, isInWatchlist, onToggleFavorite, onToggleWatchlist }) {
+interface MovieSectionProps {
+    title: string
+    movies: Movie[]
+    isFavorite: (movieId: number | string) => boolean
+    isInWatchlist: (movieId: number | string) => boolean
+    onToggleFavorite: (movie: Movie) => void
+    onToggleWatchlist: (movie: Movie) => void
+}
+
+function MovieSection({
+    title,
+    movies,
+    isFavorite,
+    isInWatchlist,
+    onToggleFavorite,
+    onToggleWatchlist
+}: MovieSectionProps) {
     if (movies.length === 0) {
         return null
     }

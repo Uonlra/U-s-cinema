@@ -1,9 +1,24 @@
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
+import type { Movie } from "../types/movie"
 import { getMovieImage, getRating, getReleaseYear } from "../utils/movieFormatters"
 import FavoriteToggleButton from "./FavoriteToggleButton"
 import WatchlistToggleButton from "./WatchlistToggleButton"
 
-function MovieStripCard({ movie, favorite, inWatchlist, onToggleFavorite, onToggleWatchlist }) {
+interface MovieStripCardProps {
+    movie: Movie
+    favorite: boolean
+    inWatchlist: boolean
+    onToggleFavorite: (movie: Movie) => void
+    onToggleWatchlist: (movie: Movie) => void
+}
+
+function MovieStripCard({
+    movie,
+    favorite,
+    inWatchlist,
+    onToggleFavorite,
+    onToggleWatchlist
+}: MovieStripCardProps) {
     const { openMovieDetails } = useMovieDetailsModal()
     const imageUrl = getMovieImage(movie)
 

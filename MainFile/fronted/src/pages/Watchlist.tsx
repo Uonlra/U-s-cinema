@@ -1,77 +1,54 @@
 import { useMemo, useState } from "react"
+import EmptyState from "../components/EmptyState"
+import PageHeader from "../components/PageHeader"
+import SearchField from "../components/SearchField"
 import SortDropdown from "../components/SortDropdown"
+import { LIBRARY_SORT_OPTIONS, MOVIE_GENRE_NAMES, type LibrarySortValue } from "../constants/movieMeta"
+import {
+    NEXT_WATCH_STATUS,
+    WATCH_STATUS_ACTION_LABELS,
+    WATCH_STATUS_FILTER_OPTIONS,
+    WATCH_STATUS_LABELS,
+    WATCH_STATUS_OPTIONS
+} from "../constants/watchStatus"
 import { useMovieDetailsModal } from "../Contexts/MovieDetailsModalContext"
 import { useMovieContext } from "../Contexts/MovieContextCore"
+import type { WatchStatus } from "../types/library"
+import type { Movie } from "../types/movie"
 import { getMovieImage, getRating, getReleaseYear } from "../utils/movieFormatters"
 import "../css/Movies.css"
 import "../css/Watchlist.css"
 
-const WATCH_STATUS_OPTIONS = [
-    { label: "All", value: "all" },
-    { label: "Not Started", value: "not-started" },
-    { label: "Watching", value: "watching" },
-    { label: "Watched", value: "watched" }
-]
+type WatchStatusFilter = WatchStatus | "all"
 
-const WATCH_SORT_OPTIONS = [
-    { label: "Rating", value: "rating" },
-    { label: "Release Year", value: "year" },
-    { label: "Title", value: "title" }
-]
-
-const GENRE_NAMES = {
-    12: "Adventure",
-    14: "Fantasy",
-    16: "Animation",
-    18: "Drama",
-    27: "Horror",
-    28: "Action",
-    35: "Comedy",
-    36: "History",
-    37: "Western",
-    53: "Thriller",
-    80: "Crime",
-    99: "Documentary",
-    878: "Sci-Fi",
-    9648: "Mystery",
-    10402: "Music",
-    10749: "Romance",
-    10751: "Family",
-    10752: "War",
-    10770: "TV Movie"
+interface WatchStatusCounts {
+    "not-started": number
+    watching: number
+    watched: number
 }
 
-const STATUS_LABELS = {
-    "not-started": "Not Started",
-    watching: "Watching",
-    watched: "Watched"
+interface WatchlistRowProps {
+    movie: Movie
+    index: number
+    status: WatchStatus
+    onAdvanceStatus: (movieId: number | string, currentStatus: WatchStatus) => void
+    onStatusChange: (movieId: number | string, status: WatchStatus) => void
+    onRemove: (movieId: number | string) => void
 }
 
-const NEXT_STATUS = {
-    "not-started": "watching",
-    watching: "watched",
-    watched: "watching"
-}
-
-const ACTION_LABELS = {
-    "not-started": "Start",
-    watching: "Mark Watched",
-    watched: "Rewatch"
-}
-
-const getReleaseYearNumber = (movie) => {
+const getReleaseYearNumber = (movie: Movie): number => {
     return Number(movie?.release_date?.split("-")[0] || 0)
 }
 
-const getMovieGenres = (movie) => {
+const getMovieGenres = (movie: Movie): string => {
     return movie.genre_ids
-        ?.map((genreId) => GENRE_NAMES[genreId])
+        ?.map((genreId) => MOVIE_GENRE_NAMES[genreId])
         .filter(Boolean)
         .slice(0, 2)
         .join(", ") || "Cinema"
 }
 
-const sortWatchlistMovies = (movies, sortValue) => {
+const sortWatchlistMovies = (movies: Movie[], sortValue: LibrarySortValue): Movie[] => {
     return [...movies].sort((firstMovie, secondMovie) => {
         if (sortValue === "year") {
             return getReleaseYearNumber(secondMovie) - getReleaseYearNumber(firstMovie)
@@ -85,6 +62,10 @@ const sortWatchlistMovies = (movies, sortValue) => {
     })
 }
 
+const isLibrarySortValue = (sortValue: string): sortValue is LibrarySortValue => {
+    return LIBRARY_SORT_OPTIONS.some((option) => option.value === sortValue)
+}
+
 function WatchlistRow({
     movie,
     index,
@@ -92,7 +73,7 @@ function WatchlistRow({
     onAdvanceStatus,
     onStatusChange,
     onRemove
-}) {
+}: WatchlistRowProps) {
     const { openMovieDetails } = useMovieDetailsModal()
     const imageUrl = getMovieImage(movie)
 
@@ -128,15 +109,15 @@ function WatchlistRow({
                     className={`watch-status-select ${status}`}
                     value={status}
                     aria-label={`Watch status for ${movie.title}`}
-                    onChange={(event) => onStatusChange(movie.id, event.target.value)}
+                    onChange={(event) => onStatusChange(movie.id, event.target.value as WatchStatus)}
                 >
-                    {WATCH_STATUS_OPTIONS.filter((option) => option.value !== "all").map((option) => (
+                    {WATCH_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
                     ))}
                 </select>
-                <span>{STATUS_LABELS[status]}</span>
+                <span>{WATCH_STATUS_LABELS[status]}</span>
             </div>
             <button
                 type="button"
@@ -144,7 +125,7 @@ function WatchlistRow({
                 onClick={() => onAdvanceStatus(movie.id, status)}
             >
                 <span aria-hidden="true">{status === "watched" ? "↻" : "▶"}</span>
-                {ACTION_LABELS[status]}
+                {WATCH_STATUS_ACTION_LABELS[status]}
             </button>
             <button
                 type="button"
@@ -166,8 +147,8 @@ function Watchlist() {
         removeFromWatchlist
     } = useMovieContext()
     const [searchValue, setSearchValue] = useState("")
-    const [activeStatus, setActiveStatus] = useState("all")
-    const [sortValue, setSortValue] = useState("rating")
+    const [activeStatus, setActiveStatus] = useState<WatchStatusFilter>("all")
+    const [sortValue, setSortValue] = useState<LibrarySortValue>("rating")
     const statusCounts = useMemo(() => {
         return watchlist.reduce((counts, movie) => {
             const status = getWatchStatus(movie.id)
@@ -179,7 +160,7 @@ function Watchlist() {
             "not-started": 0,
             watching: 0,
             watched: 0
-        })
+        } satisfies WatchStatusCounts)
     }, [getWatchStatus, watchlist])
     const visibleMovies = useMemo(() => {
         const normalizedSearch = searchValue.trim().toLowerCase()
@@ -195,17 +176,24 @@ function Watchlist() {
         return sortWatchlistMovies(filteredMovies, sortValue)
     }, [activeStatus, getWatchStatus, searchValue, sortValue, watchlist])
 
-    const handleAdvanceStatus = (movieId, currentStatus) => {
-        updateWatchStatus(movieId, NEXT_STATUS[currentStatus])
+    const handleAdvanceStatus = (movieId: number | string, currentStatus: WatchStatus) => {
+        updateWatchStatus(movieId, NEXT_WATCH_STATUS[currentStatus])
+    }
+
+    const handleSortChange = (nextSortValue: string) => {
+        if (isLibrarySortValue(nextSortValue)) {
+            setSortValue(nextSortValue)
+        }
     }
 
     return (
         <section className="watchlist-page">
             <div className="watchlist-hero">
-                <header className="watchlist-header">
-                    <h1>Watchlist</h1>
-                    <p>Save movies to watch later</p>
-                </header>
+                <PageHeader
+                    className="watchlist-header"
+                    title="Watchlist"
+                    description="Save movies to watch later"
+                />
 
                 <div className="watchlist-stats" aria-label="Watchlist summary">
                     <div className="watchlist-stat">
@@ -234,7 +222,7 @@ function Watchlist() {
 
             <div className="watchlist-controls">
                 <div className="watchlist-tabs" aria-label="Watchlist status filters">
-                    {WATCH_STATUS_OPTIONS.map((option) => (
+                    {WATCH_STATUS_FILTER_OPTIONS.map((option) => (
                         <button
                             key={option.value}
                             type="button"
@@ -248,30 +236,28 @@ function Watchlist() {
                 </div>
 
                 <div className="watchlist-tools">
-                    <form className="watchlist-search" role="search" onSubmit={(event) => event.preventDefault()}>
-                        <span aria-hidden="true">⌕</span>
-                        <input
-                            type="search"
-                            placeholder="Search watchlist..."
-                            aria-label="Search watchlist"
-                            value={searchValue}
-                            onChange={(event) => setSearchValue(event.target.value)}
-                        />
-                    </form>
+                    <SearchField
+                        className="watchlist-search"
+                        placeholder="Search watchlist..."
+                        ariaLabel="Search watchlist"
+                        value={searchValue}
+                        onChange={setSearchValue}
+                    />
 
                     <SortDropdown
-                        options={WATCH_SORT_OPTIONS}
+                        options={LIBRARY_SORT_OPTIONS}
                         value={sortValue}
-                        onChange={setSortValue}
+                        onChange={handleSortChange}
                     />
                 </div>
             </div>
 
             {watchlist.length === 0 ? (
-                <div className="watchlist-empty">
-                    <h2>No Watchlist Movies Yet</h2>
-                    <p>Add movies from Home or Movies to build your planned-to-watch queue.</p>
-                </div>
+                <EmptyState
+                    className="watchlist-empty"
+                    title="No Watchlist Movies Yet"
+                    description="Add movies from Home or Movies to build your planned-to-watch queue."
+                />
             ) : visibleMovies.length > 0 ? (
                 <div className="watchlist-list">
                     {visibleMovies.map((movie, index) => (
@@ -287,10 +273,11 @@ function Watchlist() {
                     ))}
                 </div>
             ) : (
-                <div className="watchlist-empty">
-                    <h2>No matching watchlist items.</h2>
-                    <p>Try another title or status filter.</p>
-                </div>
+                <EmptyState
+                    className="watchlist-empty"
+                    title="No matching watchlist items."
+                    description="Try another title or status filter."
+                />
             )}
         </section>
     )
