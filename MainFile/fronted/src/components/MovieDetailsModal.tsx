@@ -5,7 +5,7 @@ import MovieDetailsContent from "./MovieDetailsContent"
 
 function MovieDetailsModal() {
     const { selectedMovieId, closeMovieDetails } = useMovieDetailsModal()
-    const isOpen = Boolean(selectedMovieId)
+    const isOpen = selectedMovieId !== null
 
     useEffect(() => {
         if (!isOpen) {
@@ -36,6 +36,8 @@ function MovieDetailsModal() {
         return null
     }
 
+    const movieId = selectedMovieId
+
     return (
         <div
             className="movie-details-modal"
@@ -62,7 +64,7 @@ function MovieDetailsModal() {
                     ×
                 </button>
                 <MovieDetailsContent
-                    movieId={selectedMovieId}
+                    movieId={movieId}
                     onBack={closeMovieDetails}
                     backLabel="Close"
                 />
